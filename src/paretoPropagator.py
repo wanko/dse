@@ -48,11 +48,14 @@ class State():
         self._stack.pop()
 
 class ParetoPropagator(Propagator):
-    def __init__(self,theory):
+    def __init__(self,theory,mode):
         self._theory      = theory  # theory providing values
         self._preferences = {}      # { name : preference }
         self._l2p         = {}      # { literal : [preference] }
         self._states      = []      # [ state ]
+        self._mode        = mode
+        self._best_known  = None
+        self._solutions   = set()
 
     def _state(self, thread_id):
         while len(self._states) <= thread_id:
@@ -64,6 +67,13 @@ class ParetoPropagator(Propagator):
             if str(symbol) == str(atom.symbol.arguments[0]):
                 return init.solver_literal(atom.literal)
         return None
+
+    def save_best(self):
+        self._solutions.add(copy(self._best_known))
+        self._best_known = None
+
+    def get_best(self):
+        return self._best_known
 
     def get_solutions(self):
         solutions = set()
@@ -138,17 +148,39 @@ class ParetoPropagator(Propagator):
                 state._values.setdefault(name,None)
                 preference = self._preferences[name]
                 state.set_value(level,name,preference.update(control,changes,state._values[name]))
+        if self._mode == "breadth":
+            for solution in state._solutions:
+                worse  = False
+                better = False
+                for name in state._values:
+                    if state._values[name] == None: break
+                    if state._values[name] > solution.values()[name]: worse  = True
+                    if state._values[name] < solution.values()[name]: better = True
+                if worse and not better:
+                    control.add_nogood(state._trail) and control.propagate()
+                    return
+        elif self._mode == "depth":
+            if self._best_known != None:
+                worse  = False
+                better = False
+                for name in state._values:
+                    if state._values[name] == None: break
+                    if state._values[name] > self._best_known.values()[name]: worse  = True
+                    if state._values[name] < self._best_known.values()[name]: better = True
+                if (not better and worse) or (not better and not worse):
+                    control.add_nogood(state._trail) and control.propagate()
+                    return
 
-        for solution in state._solutions:
-            worse  = False
-            better = False
-            for name in state._values:
-                if state._values[name] == None: break
-                if state._values[name] > solution.values()[name]: worse  = True
-                if state._values[name] < solution.values()[name]: better = True
-            if worse and not better:
-                control.add_nogood(state._trail) and control.propagate()
-                return
+            for solution in self._solutions:
+                worse  = False
+                better = False
+                for name in state._values:
+                    if state._values[name] == None: break
+                    if state._values[name] > solution.values()[name]: worse  = True
+                    if state._values[name] < solution.values()[name]: better = True
+                if not (better and worse):
+                    control.add_nogood(state._trail) and control.propagate()
+                    return
 
     def check(self, control):
         state = self._state(control.thread_id)
@@ -171,4 +203,5 @@ class ParetoPropagator(Propagator):
         state = self._state(m.thread_id)
         m.extend([Function("pref", [Function(name), Function(self._preferences[name].type()), Number(value)])
                       for name, value in state._values.items()])
-        state._solutions.add(Solution([copy_symbol(atom) for atom in m.symbols(theory=True,shown=True)],copy(state._values)))
+        if self._mode == "breadth": state._solutions.add(Solution([copy_symbol(atom) for atom in m.symbols(theory=True,shown=True)],copy(state._values)))
+        elif self._mode == "depth": self._best_known = Solution([copy_symbol(atom) for atom in m.symbols(theory=True,shown=True)],copy(state._values))
