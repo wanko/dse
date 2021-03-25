@@ -12,10 +12,10 @@ processor(1,1,1,1).
 processor(2,2,1,1).
 processor(3,2,2,1).
 processor(4,1,2,1).
-router(1,1,1,1).
-router(2,2,1,1).
-router(3,2,2,1).
-router(4,1,2,1).
+router(1,1,1,2).
+router(2,2,1,2).
+router(3,2,2,2).
+router(4,1,2,2).
 task(1,1).
 task(2,1).
 task(3,1).
