@@ -62,7 +62,7 @@ class DSEApp(Application):
 
     def main(self,ctl,files):
         if self.mode == "depth":
-            self.nr_models == ctl.configuration.solve.models
+            self.nr_models = abs(int(ctl.configuration.solve.models))
         ctl.configuration.solve.models = 0
 
         thy = ClingoDLTheory()
@@ -79,7 +79,7 @@ class DSEApp(Application):
 
         if self.mode == "breadth":
             ctl.solve(on_model=self.on_model,on_finish=self.print_front)
-        else:
+        elif self.mode == "depth":
             models = 0
             while models < self.nr_models or self.nr_models == 0:
                 r = ctl.solve(on_model=self.on_model,on_finish=lambda r: self.print_single(models+1,r))

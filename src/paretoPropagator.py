@@ -162,12 +162,36 @@ class ParetoPropagator(Propagator):
         elif self._mode == "depth":
             if self._best_known != None:
                 worse  = False
+                for name in state._values:
+                    if state._values[name] == None: break
+                    if state._values[name] > self._best_known.values()[name]: worse  = True
+                if worse:
+                    control.add_nogood(state._trail) and control.propagate()
+                    return
+
+    def check(self, control):
+        state = self._state(control.thread_id)
+        if self._mode == "breadth":
+            remove = set()
+            for solution in state._solutions:
+                worse  = False
+                better = False
+                for name in state._values:
+                    if state._values[name] == None: break
+                    if state._values[name] > solution.values()[name]: worse  = True
+                    if state._values[name] < solution.values()[name]: better = True
+                if better and not worse:
+                    remove.add(solution)
+            state._solutions.difference(remove)
+        elif self._mode == "depth":
+            if self._best_known != None:
+                worse  = False
                 better = False
                 for name in state._values:
                     if state._values[name] == None: break
                     if state._values[name] > self._best_known.values()[name]: worse  = True
                     if state._values[name] < self._best_known.values()[name]: better = True
-                if (not better and worse) or (not better and not worse):
+                if not (better and not worse):
                     control.add_nogood(state._trail) and control.propagate()
                     return
 
@@ -182,17 +206,6 @@ class ParetoPropagator(Propagator):
                     control.add_nogood(state._trail) and control.propagate()
                     return
 
-    def check(self, control):
-        state = self._state(control.thread_id)
-        for solution in state._solutions:
-            worse  = False
-            better = False
-            for name in state._values:
-                if state._values[name] == None: break
-                if state._values[name] > solution.values()[name]: worse  = True
-                if state._values[name] < solution.values()[name]: better = True
-            if better and not worse:
-                state._solutions.remove(solution)
 
     def undo(self, thread_id, assign, changes):
         state = self._state(thread_id)
