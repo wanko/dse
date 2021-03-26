@@ -2,7 +2,7 @@
 
 This project allows for calculating Pareto optimal models over predefined preference types for ASPmDL programs. 
 This can be done in depth first, where the best known model is improved in a branch and bound fashion until no better model can be obtained,
-or breadth first, where an archive of solutions is improved simultaneously until the search space is exhausted an the archive contains the Pareto front.
+or breadth first, where an archive of solutions is improved simultaneously until the search space is exhausted and the archive contains the Pareto front.
 
 ### Requirements
   - clingo 5.5.0:
@@ -12,7 +12,7 @@ or breadth first, where an archive of solutions is improved simultaneously until
   - clingo-dl 1.2.0:
     - Most convenient way to install is conda via
       `conda install clingo-dl -c potassco/label/dev`
-    - Please consult the following resource for further information [clingo](https://github.com/potassco/clingoDL)
+    - Please consult the following resource for further information [clingo-dl](https://github.com/potassco/clingoDL)
   - Python >=3.9
 
 ### Usage
