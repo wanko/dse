@@ -28,8 +28,6 @@ The breadth approach ignores this options, as it always exhausts the search spac
 
     python src/dseApp.py encodings/encoding_xyz.lp encodings/priorities.lp instances/test.lp encodings/preferences.lp -q --dse-mode=depth 2
 
-For an example of how to use the clingoDL library, see [here](https://github.com/potassco/tefoli)
-
 ### Preferences
 The preference definitions are based on translated `asprin` preferences programs. 
 More information about `asprin` can be found [here](http://www.cs.uni-potsdam.de/wv/pdfformat/brderosc15a.pdf) 
