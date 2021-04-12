@@ -26,7 +26,7 @@ The breadth approach ignores this options, as it always exhausts the search spac
 
 ### Example
 
-    python dseApp.py encodings/encoding_xyz.lp encodings/priorities.lp instances/test.lp encodings/preferences.lp -q --dse-mode=depth 2
+    python src/dseApp.py encodings/encoding_xyz.lp encodings/priorities.lp instances/test.lp encodings/preferences.lp -q --dse-mode=depth 2
 
 For an example of how to use the clingoDL library, see [here](https://github.com/potassco/tefoli)
 
