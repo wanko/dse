@@ -51,7 +51,7 @@ staticPower(router(2),22).
 staticPower(router(3),24).
 staticPower(router(4),20).
 resourceCost(processor(1),20).
-resourceCost(processor(2),23).
+resourceCost(processor(2),200).
 resourceCost(processor(3),22).
 resourceCost(processor(4),23).
 resourceCost(router(1),22).

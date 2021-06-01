@@ -117,7 +117,7 @@ class ParetoPropagator(Propagator):
             if type == "max":
                 self._preferences[name] = MaxPreference(name,type,self._theory)
                 for lit in dl_lits:
-                    self._l2p.setdefault(lit,[]).append(name)
+                    self._l2p.setdefault(lit,set()).add(name)
             if type == "sum":
                 self._preferences[name] = SumPreference(name,type)    
 
@@ -134,7 +134,7 @@ class ParetoPropagator(Propagator):
                 weight = atom.symbol.arguments[4].arguments[0].number
                 self._preferences[name].add_element((lit,weight))
             init.add_watch(lit)
-            self._l2p.setdefault(lit,[]).append(name)
+            self._l2p.setdefault(lit,set()).add(name)
 
     def propagate(self, control, changes):
         state = self._state(control.thread_id)
@@ -143,11 +143,13 @@ class ParetoPropagator(Propagator):
             state._stack.append((level, len(state._trail)))
         state._trail.extend(changes)
 
+        to_update = set()
         for lit in changes:
-            for name in self._l2p[lit]:
-                state._values.setdefault(name,None)
-                preference = self._preferences[name]
-                state.set_value(level,name,preference.update(control,changes,state._values[name]))
+            for name in self._l2p[lit]: to_update.add(name)
+        for name in to_update:
+            state._values.setdefault(name,None)
+            preference = self._preferences[name]
+            state.set_value(level,name,preference.update(control,changes,state._values[name]))
         if self._mode == "breadth":
             for solution in state._solutions:
                 worse  = False
