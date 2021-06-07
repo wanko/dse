@@ -27,11 +27,9 @@ nr_links(NR) :- NR=#count{ link(N,N') : link(N,N'), N<N' }.
 { reached(comm(T,T',A),N,N') : link(N,N') } 1 :- node(N'), comm(T,T',A).
 
 visit(C,R) :- send(T,C), bind(_,T,R).
-visit(C,R) :- reached(C,_,R).
-:- reached(C,R,R'), reached(C,R',R).
-:- reached(C,R,_), not visit(C,R).
+visit(C,R') :- visit(C,R), reached(C,R,R').
+:- reached(C,_,R), not visit(C,R).
 :- read(T,C), bind(_,T,R), not visit(C,R).
-:- reached(C,_,_), send(T,C), bind(_,T,R), read(T',C), bind(_,T',R).
 	
 hops(C,R,0)    :- send(T,C), bind(_,T,R).
 hops(C,R',H+1) :- hops(C,R,H), reached(C,R,R'), H+1<=NR, nr_links(NR).
