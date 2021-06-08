@@ -3,28 +3,28 @@
 %%%%%%%%%%%%%%%%%
 
 allocated(R) :- bind(_,task(T,A),R), task(T,A).
-allocated(R) :- sink(_,R).
+allocated(R) :- reached(_,R,_).
+allocated(R) :- reached(_,_,R).
+allocated(link(R1,R2)) :- reached(_,R1,R2).
 
 %%%%%%%%%%%%%%%
 %%  BINDING  %%
 %%%%%%%%%%%%%%%
 
-%for the sake of binding, fifos are also tasks
 1 { bind(M,task(T,A),R) : map(M,task(T,A),R) } 1 :- task(T,A).
 
 %%%%%%%%%%%%%%%
 %%  ROUTING  %%
 %%%%%%%%%%%%%%%
 
-%NOTE: This is different to Andres et al. as we require unicast instead of multicast communication between tasks
-root(C,R) :- send(task(T,A),C), bind(_,task(T,A),R), task(T,A).
-% resources of communication task per target
-sink(C,R) :- read(T,C), bind(_,T,R).
-sink(C,R) :- sink(C,S), reached(C,R,S).
-% reach communication root resource
-:- read(T,C), root(C,R), not sink(C,R).
-% backward hops of communication task 
-1 { reached(C,R,S) : link(R,S) } 1 :- sink(C,S), not root(C,S). 
+{ reached(comm(T,T',A),N,N') : link(N,N') } 1 :- node(N), comm(T,T',A).
+{ reached(comm(T,T',A),N,N') : link(N,N') } 1 :- node(N'), comm(T,T',A).
+
+visit(C,R) :- send(T,C), bind(_,T,R).
+visit(C,R') :- visit(C,R), reached(C,R,R').
+:- reached(C,_,R), not visit(C,R).
+:- read(T,C), bind(_,T,R), not visit(C,R).
+
 % ensure all routes have smallest number of hops (same as dimensional ordered routing)
 hops(C,N) :- bind(_,T1,processor(R)), bind(_,T2,processor(R')), R!=R',
 			 send(T1,C), read(T2,C),

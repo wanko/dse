@@ -9,6 +9,14 @@ link(router(1),router(2)).
 link(router(2),router(3)).
 link(router(3),router(4)).
 link(router(4),router(1)).
+link(processor(1),router(1)).
+link(processor(2),router(2)).
+link(processor(3),router(3)).
+link(processor(4),router(4)).
+link(router(2),router(1)).
+link(router(3),router(2)).
+link(router(4),router(3)).
+link(router(1),router(4)).
 processor(1,1,1,1).
 processor(2,2,1,1).
 processor(3,2,2,1).

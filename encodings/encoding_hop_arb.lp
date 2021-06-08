@@ -12,7 +12,6 @@ allocated(link(R1,R2)) :- reached(_,R1,R2).
 %%  BINDING  %%
 %%%%%%%%%%%%%%%
 
-%for the sake of binding, fifos are also tasks
 1 { bind(M,task(T,A),R) : map(M,task(T,A),R) } 1 :- task(T,A).
 
 %%%%%%%%%%%%%%%
@@ -20,8 +19,7 @@ allocated(link(R1,R2)) :- reached(_,R1,R2).
 %%%%%%%%%%%%%%%
 
 node(N;N') :- link(N,N').
-link(N',N) :- link(N,N').
-nr_links(NR) :- NR=#count{ link(N,N') : link(N,N'), N<N' }.
+nr_links(NR) :- NR=#count{ link(N,N') : link(N,N') }.
 
 { reached(comm(T,T',A),N,N') : link(N,N') } 1 :- node(N), comm(T,T',A).
 { reached(comm(T,T',A),N,N') : link(N,N') } 1 :- node(N'), comm(T,T',A).
@@ -32,7 +30,7 @@ visit(C,R') :- visit(C,R), reached(C,R,R').
 :- read(T,C), bind(_,T,R), not visit(C,R).
 	
 hops(C,R,0)    :- send(T,C), bind(_,T,R).
-hops(C,R',H+1) :- hops(C,R,H), reached(C,R,R'), H+1<=NR, nr_links(NR).
+hops(C,R',H+1) :- hops(C,R,H), reached(C,R,R'), H<NR, nr_links(NR).
 hops(C,H)      :- hops(C,R,H), read(T',C), bind(_,T',R).	
 
 %%%%%%%%%%%%%%%%%%

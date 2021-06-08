@@ -11,7 +11,6 @@ allocated(link(R1,R2)) :- reached(_,R1,R2).
 %%  BINDING  %%
 %%%%%%%%%%%%%%%
 
-%for the sake of binding, fifos are also tasks
 1 { bind(M,task(T,A),R) : map(M,task(T,A),R) } 1 :- task(T,A).
 
 %%%%%%%%%%%%%%%
