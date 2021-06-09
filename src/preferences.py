@@ -49,8 +49,9 @@ class SumPreference():
         else:     sum = 0
         
         for lit in changes:
-            if lit in self.__l2e:
-                for summand in self.__l2e[lit]:
-                    sum += summand
+            if control.assignment.is_true(lit):
+                if lit in self.__l2e:
+                    for summand in self.__l2e[lit]:
+                        sum += summand
         
         return sum

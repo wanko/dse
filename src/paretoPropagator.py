@@ -173,6 +173,10 @@ class ParetoPropagator(Propagator):
 
     def check(self, control):
         state = self._state(control.thread_id)
+        for name in self._preferences:
+            state._values.setdefault(name,None)
+            preference = self._preferences[name]
+            state.set_value(control.assignment.decision_level,name,preference.update(control,control.assignment,None))
         if self._mode == "breadth":
             remove = set()
             for solution in state._solutions:
