@@ -1,6 +1,6 @@
 from clingo.symbol import Function, Number, SymbolType, Tuple_
 from clingo.theory_atoms import TheoryTermType
-from clingo.propagator import Propagator
+from clingo.propagator import Propagator, PropagatorCheckMode
 from preferences import MaxPreference, SumPreference
 from util import copy_symbol
 from copy import copy
@@ -98,19 +98,21 @@ class ParetoPropagator(Propagator):
         return solutions.difference(remove)
 
     def init(self, init):
+        init.check_mode = PropagatorCheckMode.Total
         dl_lits = []
         for atom in init.theory_atoms:
             term = atom.term
             if term.name == "__diff_h" and len(term.arguments) == 0:
                 lit = init.solver_literal(atom.literal)
                 dl_lits.append(lit)
+                init.add_watch(lit)
             if term.name == "__diff_b" and len(term.arguments) == 0:
                 lit = init.solver_literal(atom.literal)
                 dl_lits.append(lit)
                 init.add_watch(lit)
                 dl_lits.append(-lit)
                 init.add_watch(-lit)
-
+        
         for atom in init.symbolic_atoms.by_signature("_preference",2):
             name     = str(atom.symbol.arguments[0].name)
             type     = str(atom.symbol.arguments[1].name)
@@ -173,17 +175,12 @@ class ParetoPropagator(Propagator):
 
     def check(self, control):
         state = self._state(control.thread_id)
-        for name in self._preferences:
-            state._values.setdefault(name,None)
-            preference = self._preferences[name]
-            state.set_value(control.assignment.decision_level,name,preference.update(control,control.assignment,None))
         if self._mode == "breadth":
             remove = set()
             for solution in state._solutions:
                 worse  = False
                 better = False
                 for name in state._values:
-                    if state._values[name] == None: break
                     if state._values[name] > solution.values()[name]: worse  = True
                     if state._values[name] < solution.values()[name]: better = True
                 if better and not worse:
