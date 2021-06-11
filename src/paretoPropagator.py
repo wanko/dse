@@ -181,7 +181,8 @@ class ParetoPropagator(Propagator):
                 if worse and not better:
                     self._statistics[control.thread_id]["clauses"]+=1
                     self._statistics[control.thread_id]["literals"]+=len(state._trail)
-                    control.add_nogood(state._trail) and control.propagate()
+                    if control.add_nogood(state._trail):
+                         control.propagate()
                     return
         elif self._mode == "depth":
             if self._best_known != None:
@@ -192,7 +193,8 @@ class ParetoPropagator(Propagator):
                 if worse:
                     self._statistics[control.thread_id]["clauses"]+=1
                     self._statistics[control.thread_id]["literals"]+=len(state._trail)
-                    control.add_nogood(state._trail) and control.propagate()
+                    if control.add_nogood(state._trail):
+                         control.propagate()
                     return
 
     def check(self, control):
@@ -220,7 +222,8 @@ class ParetoPropagator(Propagator):
                 if not (better and not worse):
                     self._statistics[control.thread_id]["clauses"]+=1
                     self._statistics[control.thread_id]["literals"]+=len(state._trail)
-                    control.add_nogood(state._trail) and control.propagate()
+                    if control.add_nogood(state._trail):
+                         control.propagate()
                     return
 
             for solution in self._solutions:
@@ -233,7 +236,8 @@ class ParetoPropagator(Propagator):
                 if not (better and worse):
                     self._statistics[control.thread_id]["clauses"]+=1
                     self._statistics[control.thread_id]["literals"]+=len(state._trail)
-                    control.add_nogood(state._trail) and control.propagate()
+                    if control.add_nogood(state._trail):
+                         control.propagate()
                     return
 
 
