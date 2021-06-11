@@ -15,9 +15,8 @@ class MaxPreference():
     def type(self):
         return self.__type
 
-    def update(self,control,changes,value):
-        if value: max = value
-        else:     max = float('-inf')
+    def value(self,control):
+        max = float('-inf')
         
         for lit in self.__l2e:
             if control.assignment.is_true(lit):
@@ -44,14 +43,12 @@ class SumPreference():
     def type(self):
         return self.__type
 
-    def update(self,control,changes,value):
-        if value: sum = value
-        else:     sum = 0
+    def value(self,control):
+        sum = 0
         
-        for lit in changes:
+        for lit in self.__l2e:
             if control.assignment.is_true(lit):
-                if lit in self.__l2e:
-                    for summand in self.__l2e[lit]:
-                        sum += summand
+                for summand in self.__l2e[lit]:
+                    sum += summand
         
         return sum

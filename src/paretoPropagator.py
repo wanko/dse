@@ -119,7 +119,7 @@ class ParetoPropagator(Propagator):
         values = self._values.setdefault(control.thread_id,{})
         for name in self._preferences:
             preference = self._preferences[name]
-            values[name] = preference.update(control,control.assignment,None)
+            values[name] = preference.value(control)
         if self._mode == "breadth":            
             remove = set()
             current_front = self._current_front.setdefault(control.thread_id,set())
@@ -151,7 +151,9 @@ class ParetoPropagator(Propagator):
                         better = True
                         break
                     if values[name] > self._best_known.values()[name]: worse  = True
-                    if values[name] < self._best_known.values()[name]: better = True
+                    if values[name] < self._best_known.values()[name]: 
+                        better = True
+                        if control.assignment.is_total: break
                 if worse and not control.assignment.is_total:
                     nogood = [lit for lit in control.assignment.trail if lit in self._relevant_lits]
                     self._statistics[control.thread_id]["clauses"]+=1
