@@ -132,11 +132,12 @@ class ParetoPropagator(Propagator):
                         break
                     if values[name] > solution.values()[name]: worse  = True
                     if values[name] < solution.values()[name]: better = True
-                if worse and not better and not control.assignment.is_total:
-                    nogood = [lit for lit in control.assignment if lit in self._relevant_lits]
+                if worse and not better:
+                    nogood = [lit for lit in control.assignment.trail if lit in self._relevant_lits]
                     self._statistics[control.thread_id]["clauses"]+=1
                     self._statistics[control.thread_id]["literals"]+=len(nogood)
-                    control.add_nogood(nogood) and control.propagate()
+                    if control.add_nogood(nogood):
+                        control.propagate()
                     return
                 if better and not worse and control.assignment.is_total:
                     remove.add(solution)
@@ -146,35 +147,42 @@ class ParetoPropagator(Propagator):
                 worse  = False
                 better = False
                 for name in values:
-                    if values[name] == None: break
+                    if values[name] == None: 
+                        better = True
+                        break
                     if values[name] > self._best_known.values()[name]: worse  = True
                     if values[name] < self._best_known.values()[name]: better = True
                 if worse and not control.assignment.is_total:
-                    nogood = [lit for lit in control.assignment if lit in self._relevant_lits]
+                    nogood = [lit for lit in control.assignment.trail if lit in self._relevant_lits]
                     self._statistics[control.thread_id]["clauses"]+=1
                     self._statistics[control.thread_id]["literals"]+=len(nogood)
-                    control.add_nogood(nogood) and control.propagate()
+                    if control.add_nogood(nogood):
+                        control.propagate()
                     return
                 if not (better and not worse) and control.assignment.is_total:
-                    nogood = [lit for lit in control.assignment if lit in self._relevant_lits]
+                    nogood = [lit for lit in control.assignment.trail if lit in self._relevant_lits]
                     self._statistics[control.thread_id]["clauses"]+=1
                     self._statistics[control.thread_id]["literals"]+=len(nogood)
-                    control.add_nogood(nogood) and control.propagate()
+                    if control.add_nogood(nogood):
+                        control.propagate()
                     return
-
-            for solution in self._solutions:
-                worse  = False
-                better = False
-                for name in values:
-                    if values[name] == None: break
-                    if values[name] > solution.values()[name]: worse  = True
-                    if values[name] < solution.values()[name]: better = True
-                if not (better and worse):
-                    nogood = [lit for lit in control.assignment if lit in self._relevant_lits]
-                    self._statistics[control.thread_id]["clauses"]+=1
-                    self._statistics[control.thread_id]["literals"]+=len(nogood)
-                    control.add_nogood(nogood) and control.propagate()
-                    return
+            if control.assignment.is_total:
+                for solution in self._solutions:
+                    worse  = False
+                    better = False
+                    for name in values:
+                        if values[name] == None: 
+                            better = True
+                            break
+                        if values[name] > solution.values()[name]: worse  = True
+                        if values[name] < solution.values()[name]: better = True
+                    if not (better and worse):
+                        nogood = [lit for lit in control.assignment.trail if lit in self._relevant_lits]
+                        self._statistics[control.thread_id]["clauses"]+=1
+                        self._statistics[control.thread_id]["literals"]+=len(nogood)
+                        if control.add_nogood(nogood):
+                            control.propagate()
+                        return
 
     def on_model(self, m):
         values = self._values[m.thread_id]
