@@ -1,3 +1,4 @@
+from typing import OrderedDict
 from clingo.symbol import Function, Number, SymbolType, Tuple_
 from clingo.theory_atoms import TheoryTermType
 from clingo.propagator import Propagator, PropagatorCheckMode
@@ -56,6 +57,7 @@ class ParetoPropagator(Propagator):
         self._mode        = mode
         self._best_known  = None
         self._solutions   = set()
+        self._statistics  = {}      # { thread : {propgates : int, checks : int, clauses : int, literals : int}}
 
     def _state(self, thread_id):
         while len(self._states) <= thread_id:
@@ -67,6 +69,18 @@ class ParetoPropagator(Propagator):
             if str(symbol) == str(atom.symbol.arguments[0]):
                 return init.solver_literal(atom.literal)
         return None
+
+    def _init_statistics(self,threads):
+        for id in range(0,threads):
+            self._statistics[id] = { "propagates" : 0, "checks" : 0, "clauses" : 0, "literals" : 0}
+
+    def _on_statistics(self, step, accumulation):
+        accumulation["Pareto optimization"] = OrderedDict([("Thread "+str(id),OrderedDict([
+                ("Calls to propagate", self._statistics[id]["propagates"]),
+                ("Calls to check", self._statistics[id]["checks"]),
+                ("Clauses added", self._statistics[id]["clauses"]),
+                ("Average clause length", self._statistics[id]["literals"]/max(1,self._statistics[id]["clauses"]))
+            ])) for id in self._statistics])
 
     def save_best(self):
         self._solutions.add(copy(self._best_known))
@@ -98,6 +112,7 @@ class ParetoPropagator(Propagator):
         return solutions.difference(remove)
 
     def init(self, init):
+        self._init_statistics(init.number_of_threads)
         init.check_mode = PropagatorCheckMode.Total
         dl_lits = []
         for atom in init.theory_atoms:
@@ -139,6 +154,7 @@ class ParetoPropagator(Propagator):
             self._l2p.setdefault(lit,set()).add(name)
 
     def propagate(self, control, changes):
+        self._statistics[control.thread_id]["propagates"]+=1
         state = self._state(control.thread_id)
         level = control.assignment.decision_level
         if len(state._stack) == 0 or state._stack[-1][0] < level:
@@ -157,10 +173,14 @@ class ParetoPropagator(Propagator):
                 worse  = False
                 better = False
                 for name in state._values:
-                    if state._values[name] == None: break
+                    if state._values[name] == None: 
+                        better = True
+                        break
                     if state._values[name] > solution.values()[name]: worse  = True
                     if state._values[name] < solution.values()[name]: better = True
                 if worse and not better:
+                    self._statistics[control.thread_id]["clauses"]+=1
+                    self._statistics[control.thread_id]["literals"]+=len(state._trail)
                     control.add_nogood(state._trail) and control.propagate()
                     return
         elif self._mode == "depth":
@@ -170,10 +190,13 @@ class ParetoPropagator(Propagator):
                     if state._values[name] == None: break
                     if state._values[name] > self._best_known.values()[name]: worse  = True
                 if worse:
+                    self._statistics[control.thread_id]["clauses"]+=1
+                    self._statistics[control.thread_id]["literals"]+=len(state._trail)
                     control.add_nogood(state._trail) and control.propagate()
                     return
 
     def check(self, control):
+        self._statistics[control.thread_id]["checks"]+=1
         state = self._state(control.thread_id)
         if self._mode == "breadth":
             remove = set()
@@ -191,10 +214,12 @@ class ParetoPropagator(Propagator):
                 worse  = False
                 better = False
                 for name in state._values:
-                    if state._values[name] == None: break
+                    assert state._values[name] != None
                     if state._values[name] > self._best_known.values()[name]: worse  = True
                     if state._values[name] < self._best_known.values()[name]: better = True
                 if not (better and not worse):
+                    self._statistics[control.thread_id]["clauses"]+=1
+                    self._statistics[control.thread_id]["literals"]+=len(state._trail)
                     control.add_nogood(state._trail) and control.propagate()
                     return
 
@@ -202,10 +227,12 @@ class ParetoPropagator(Propagator):
                 worse  = False
                 better = False
                 for name in state._values:
-                    if state._values[name] == None: break
+                    assert state._values[name] != None
                     if state._values[name] > solution.values()[name]: worse  = True
                     if state._values[name] < solution.values()[name]: better = True
                 if not (better and worse):
+                    self._statistics[control.thread_id]["clauses"]+=1
+                    self._statistics[control.thread_id]["literals"]+=len(state._trail)
                     control.add_nogood(state._trail) and control.propagate()
                     return
 

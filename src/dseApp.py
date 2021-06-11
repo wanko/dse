@@ -28,6 +28,10 @@ class DSEApp(Application):
             return True
         return parse
 
+    def _on_statistics(self,step,accumulation):
+        self.theory.on_statistics(step,accumulation)
+        self.propagator._on_statistics(step,accumulation)
+
     def on_model(self,m):
         self.theory.on_model(m)
         self.propagator.on_model(m)
@@ -74,15 +78,16 @@ class DSEApp(Application):
         pareto_propagator = ParetoPropagator(thy,self.mode)
         self.propagator = pareto_propagator
         ctl.register_propagator(pareto_propagator)
+
         ctl.ground([('base', [])])
         thy.prepare(ctl)
 
         if self.mode == "breadth":
-            ctl.solve(on_model=self.on_model,on_finish=self.print_front)
+            ctl.solve(on_model=self.on_model, on_finish=self.print_front, on_statistics=self._on_statistics)
         elif self.mode == "depth":
             models = 0
             while models < self.nr_models or self.nr_models == 0:
-                r = ctl.solve(on_model=self.on_model,on_finish=lambda r: self.print_single(models+1,r))
+                r = ctl.solve(on_model=self.on_model, on_finish=lambda m: self.print_single(models+1,m), on_statistics=self._on_statistics)
                 if r.unsatisfiable: return
                 models += 1
                 self.propagator.save_best()
