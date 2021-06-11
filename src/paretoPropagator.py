@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from clingo.symbol import Function, Number, SymbolType, Tuple_
 from clingo.theory_atoms import TheoryTermType
 from clingo.propagator import Propagator, PropagatorCheckMode
@@ -26,12 +27,24 @@ class ParetoPropagator(Propagator):
         self._current_front = {}      # { thread : set of Solution }
         self._values        = {}      # { thread : values }
         self._relevant_lits = set()
+        self._statistics  = {}      # { thread : {checks : int, clauses : int, literals : int}}
 
     def _symbol_to_lit(self,symbol,init):
         for atom in init.symbolic_atoms.by_signature("_holds",2):
             if str(symbol) == str(atom.symbol.arguments[0]):
                 return init.solver_literal(atom.literal)
         return None
+        
+    def _init_statistics(self,threads):
+        for id in range(0,threads):
+            self._statistics[id] = { "checks" : 0, "clauses" : 0, "literals" : 0}
+
+    def _on_statistics(self, step, accumulation):
+        accumulation["Pareto optimization"] = OrderedDict([("Thread "+str(id),OrderedDict([
+                ("Calls to check", self._statistics[id]["checks"]),
+                ("Clauses added", self._statistics[id]["clauses"]),
+                ("Average clause length", self._statistics[id]["literals"]/max(1,self._statistics[id]["clauses"]))
+            ])) for id in self._statistics])
 
     def save_best(self):
         self._solutions.add(copy(self._best_known))
@@ -63,6 +76,7 @@ class ParetoPropagator(Propagator):
         return solutions.difference(remove)
 
     def init(self, init):
+        self._init_statistics(init.number_of_threads)
         init.check_mode = PropagatorCheckMode.Both
 
         dl_required = False
@@ -101,6 +115,7 @@ class ParetoPropagator(Propagator):
                 self._preferences[name].add_element((lit,weight))
 
     def check(self, control):
+        self._statistics[control.thread_id]["checks"]+=1
         values = self._values.setdefault(control.thread_id,{})
         for name in self._preferences:
             preference = self._preferences[name]
@@ -119,6 +134,8 @@ class ParetoPropagator(Propagator):
                     if values[name] < solution.values()[name]: better = True
                 if worse and not better and not control.assignment.is_total:
                     nogood = [lit for lit in control.assignment if lit in self._relevant_lits]
+                    self._statistics[control.thread_id]["clauses"]+=1
+                    self._statistics[control.thread_id]["literals"]+=len(nogood)
                     control.add_nogood(nogood) and control.propagate()
                     return
                 if better and not worse and control.assignment.is_total:
@@ -134,10 +151,14 @@ class ParetoPropagator(Propagator):
                     if values[name] < self._best_known.values()[name]: better = True
                 if worse and not control.assignment.is_total:
                     nogood = [lit for lit in control.assignment if lit in self._relevant_lits]
+                    self._statistics[control.thread_id]["clauses"]+=1
+                    self._statistics[control.thread_id]["literals"]+=len(nogood)
                     control.add_nogood(nogood) and control.propagate()
                     return
                 if not (better and not worse) and control.assignment.is_total:
                     nogood = [lit for lit in control.assignment if lit in self._relevant_lits]
+                    self._statistics[control.thread_id]["clauses"]+=1
+                    self._statistics[control.thread_id]["literals"]+=len(nogood)
                     control.add_nogood(nogood) and control.propagate()
                     return
 
@@ -150,6 +171,8 @@ class ParetoPropagator(Propagator):
                     if values[name] < solution.values()[name]: better = True
                 if not (better and worse):
                     nogood = [lit for lit in control.assignment if lit in self._relevant_lits]
+                    self._statistics[control.thread_id]["clauses"]+=1
+                    self._statistics[control.thread_id]["literals"]+=len(nogood)
                     control.add_nogood(nogood) and control.propagate()
                     return
 
