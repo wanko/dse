@@ -22,9 +22,10 @@ class MaxPreference():
         for lit in self.__l2e:
             if control.assignment.is_true(lit):
                 for variable, offset in self.__l2e[lit]:
-                    assignment = self.__theory.get_value(control.thread_id,variable)
-                    if max < assignment + offset:
-                        max =  assignment + offset
+                    if self.__theory.has_value(control.thread_id,variable):
+                        assignment = self.__theory.get_value(control.thread_id,variable)
+                        if max < assignment + offset:
+                            max =  assignment + offset
 
         return max
 
