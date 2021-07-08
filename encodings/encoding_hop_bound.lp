@@ -17,6 +17,7 @@ allocated(link(R1,R2)) :- reached(_,R1,R2).
 %%  ROUTING  %%
 %%%%%%%%%%%%%%%
 
+node(N;N') :- link(N,N').
 { reached(comm(T,T',A),N,N') : link(N,N') } 1 :- node(N), comm(T,T',A).
 { reached(comm(T,T',A),N,N') : link(N,N') } 1 :- node(N'), comm(T,T',A).
 
