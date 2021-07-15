@@ -49,7 +49,7 @@ class State():
         self._stack.pop()
 
 class ParetoPropagator(Propagator):
-    def __init__(self,theory,mode):
+    def __init__(self,theory,mode,duplicates):
         self._theory      = theory  # theory providing values
         self._preferences = {}      # { name : preference }
         self._l2p         = {}      # { literal : [preference] }
@@ -58,6 +58,7 @@ class ParetoPropagator(Propagator):
         self._best_known  = None
         self._solutions   = set()
         self._statistics  = {}      # { thread : {propgates : int, checks : int, clauses : int, literals : int}}
+        self._duplicates  = duplicates
 
     def _state(self, thread_id):
         while len(self._states) <= thread_id:
@@ -179,6 +180,12 @@ class ParetoPropagator(Propagator):
                     if state._values[name] > solution.values()[name]: worse  = True
                     if state._values[name] < solution.values()[name]: better = True
                 if worse and not better:
+                    self._statistics[control.thread_id]["clauses"]+=1
+                    self._statistics[control.thread_id]["literals"]+=len(state._trail)
+                    if control.add_nogood(state._trail):
+                         control.propagate()
+                    return
+                if control.assignment.is_total and not worse and not better and not self._duplicates:
                     self._statistics[control.thread_id]["clauses"]+=1
                     self._statistics[control.thread_id]["literals"]+=len(state._trail)
                     if control.add_nogood(state._trail):

@@ -1,5 +1,5 @@
 import sys
-from clingo import Application, clingo_main
+from clingo import Application, Flag, clingo_main
 from clingo.ast import parse_files, ProgramBuilder
 from clingodl import ClingoDLTheory
 from paretoPropagator import ParetoPropagator
@@ -7,12 +7,13 @@ from paretoPropagator import ParetoPropagator
 
 class DSEApp(Application):
     def __init__(self):
-        self.program_name = "Design Space Exploration with ASPmDL"
-        self.version      = "1.0"
-        self.theory       = None
-        self.propagator   = None
-        self.mode         = "breadth"
-        self.nr_models    = 0
+        self.program_name      = "Design Space Exploration with ASPmDL"
+        self.version           = "1.0"
+        self.theory            = None
+        self.propagator        = None
+        self.mode              = "breadth"
+        self.nr_models         = 0
+        self.duplicate_vectors = Flag(False)
 
     def _parse_mode(self):
         def parse(value):
@@ -39,7 +40,7 @@ class DSEApp(Application):
     def print_front(self,r):
         if r.unsatisfiable: return
         print("")
-        if r.interrupted: print("Best known Pareto front:")
+        if r.interrupted: print("Search interrupted: Approximate Pareto front:")
         else:             print("Pareto front:")
         solutions = self.propagator.get_solutions() 
         n = 1
@@ -63,6 +64,17 @@ class DSEApp(Application):
             "Design Space Exploration", "dse-mode",
             "Select mode, either simultaneously improving the whole Pareto front (breadth), or calculating certain number of Pareto optimal models (depth). Default: breadth",
             self._parse_mode())  
+        options.add_flag(
+            "Design Space Exploration", "duplicate-vectors",
+            "During breadth-first search, keep solutions with same quality vector",
+            self.duplicate_vectors
+        )
+
+    def validate_options(self):
+        if self.mode == "depth" and self.duplicate_vectors:
+            print("Depth-first search does not allow for keeping solutions with same quality vector")
+            return False
+        return True
 
     def main(self,ctl,files):
         if self.mode == "depth":
@@ -75,7 +87,7 @@ class DSEApp(Application):
         with ProgramBuilder(ctl) as bld:
             parse_files(files, lambda ast: thy.rewrite_ast(ast, bld.add))
 
-        pareto_propagator = ParetoPropagator(thy,self.mode)
+        pareto_propagator = ParetoPropagator(thy,self.mode,self.duplicate_vectors)
         self.propagator = pareto_propagator
         ctl.register_propagator(pareto_propagator)
 

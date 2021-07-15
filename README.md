@@ -22,7 +22,7 @@ or breadth first, where an archive of solutions is improved simultaneously until
 Option `--dse-mode MODE` can be used to switch between depth first (MODE=depth),
 and breadth based approach (MODE=breadth), by default MODE=breadth.
 For the depth mode, the clingo parameter for number of models is used to determine how many Pareto optimal models are iterated, as usual 0 means all models.
-The breadth approach ignores this options, as it always exhausts the search space.
+The breadth approach ignores this options, as it always exhausts the search space. Add flag `--duplicate-vectors` to keep several solutions with the same quality vector in breadth mode, by default only the first is stored.
 
 ### Example
 
