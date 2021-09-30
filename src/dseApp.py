@@ -14,6 +14,7 @@ class DSEApp(Application):
         self.mode              = "breadth"
         self.nr_models         = 0
         self.duplicate_vectors = Flag(False)
+        self.dl_propagation_mode  = "no"
 
     def _parse_mode(self):
         def parse(value):
@@ -26,6 +27,13 @@ class DSEApp(Application):
         def parse(value):
             nr_models = int(value)
             self.nr_models = nr_models
+            return True
+        return parse
+
+    def _parse_propagation_mode(self):
+        def parse(value):
+            if not isinstance(value,str) or value not in ["no","inverse","partial","partial+","zero","full"]: return False
+            self.dl_propagation_mode = value
             return True
         return parse
 
@@ -69,6 +77,10 @@ class DSEApp(Application):
             "During breadth-first search, keep solutions with same quality vector",
             self.duplicate_vectors
         )
+        options.add(
+            "Clingo.DL Options", "propagate",
+            "Set propagation mode [no]",
+            self._parse_propagation_mode())  
 
     def validate_options(self):
         if self.mode == "depth" and self.duplicate_vectors:
@@ -93,6 +105,7 @@ class DSEApp(Application):
 
         ctl.ground([('base', [])])
         thy.prepare(ctl)
+        thy.configure("propagate",self.dl_propagation_mode)
 
         if self.mode == "breadth":
             ctl.solve(on_model=self.on_model, on_finish=self.print_front, on_statistics=self._on_statistics)
