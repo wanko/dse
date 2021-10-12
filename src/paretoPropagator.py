@@ -5,6 +5,7 @@ from clingo.propagator import Propagator, PropagatorCheckMode
 from preferences import MaxPreference, SumPreference
 from util import copy_symbol
 from copy import copy
+from QuadTree import QuadTree, check, check_pareto
 
 class Solution():
     def __init__(self,atoms,values):
@@ -20,7 +21,7 @@ class Solution():
 class State():
     def __init__(self):
         self._values           = {}        # { name : value }
-        self._solutions        = set()     # { solutions }
+        self._solutions        = QuadTree     # { solutions }
         self._previous_values  = {}        # { level : { name : value } }
         self._trail            = []        # [ literal ]
         self._stack            = []        # [ (level,index) ]
