@@ -13,7 +13,6 @@ class DSEApp(Application):
         self.propagator        = None
         self.mode              = "breadth"
         self.nr_models         = 0
-        self.duplicate_vectors = Flag(False)
         self.dl_propagation_mode  = "no"
 
     def _parse_mode(self):
@@ -72,20 +71,12 @@ class DSEApp(Application):
             "Design Space Exploration", "dse-mode",
             "Select mode, either simultaneously improving the whole Pareto front (breadth), or calculating certain number of Pareto optimal models (depth). Default: breadth",
             self._parse_mode())  
-        options.add_flag(
-            "Design Space Exploration", "duplicate-vectors",
-            "During breadth-first search, keep solutions with same quality vector",
-            self.duplicate_vectors
-        )
         options.add(
             "Clingo.DL Options", "propagate",
             "Set propagation mode [no]",
             self._parse_propagation_mode())  
 
     def validate_options(self):
-        if self.mode == "depth" and self.duplicate_vectors:
-            print("Depth-first search does not allow for keeping solutions with same quality vector")
-            return False
         return True
 
     def main(self,ctl,files):

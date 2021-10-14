@@ -42,7 +42,6 @@ class QuadTree:
 
 	def print_tree_indented_internal(self, tree : 'QuadTree', level=0, index=-1):
 		if tree == None: 
-            # print '--' * level + str(i) + "None" 
 			return
 		for i in range(int(self.number_of_children/2)):
 			self.print_tree_indented_internal(tree.children[i], level+1,i)
@@ -80,7 +79,7 @@ class QuadTree:
 				return_value |= 1 << (self.dimensions - dim - 1)
 		return return_value
 	
-	def dominates_new(self, insert, newVector, newModel, current:'QuadTree', ancestorsAlive):
+	def dominates(self, insert, newVector, newModel, current:'QuadTree', ancestorsAlive):
 		"""Checks and updates the QuadTree, i.e. dominated items are getting deleted.
 		The 'ancestorsAlive' parameter provides the information that one (or more) predecessor node was already dominated by 'newVector' (ancestorsAlive=False) or not (ancestorsAlive=True).
 		In the former case (ancestorsAlive=False), the 'current' node is added to the returned reinsert list.
@@ -97,7 +96,7 @@ class QuadTree:
 			for l_succ in x:
 				#insert=False -> it will be inserted here
 				#ancestorsAlive=False -> 'current' is dominated and thus, not Pareto optimal anymore 
-				reinsert += current.dominates_new(False, newVector, newModel, current.children[l_succ], False)
+				reinsert += current.dominates(False, newVector, newModel, current.children[l_succ], False)
 				current.children[l_succ] = None
 			if ancestorsAlive and insert:
 				current.vector = newVector
@@ -130,7 +129,7 @@ class QuadTree:
 			if ancestorsAlive:
 				#if 'newVector' shall be inserted in this subtree, insert it further into the k_succ subtree
 				if current.children[k_succ] != None:
-					reinsert += current.dominates_new(insert, newVector, newModel, current.children[k_succ], True)
+					reinsert += current.dominates(insert, newVector, newModel, current.children[k_succ], True)
 					
 				elif insert:
 					#no vector at position k_succ, so 'newVector' has to be inserted at position k_succ
@@ -141,20 +140,17 @@ class QuadTree:
 				for l_succ in x:
 					#'newVector' won't be inserted into an l_succ (insert=False)
 					#ancestorsAlive is inherited
-					reinsert += current.dominates_new(False, newVector, newModel, current.children[l_succ], ancestorsAlive)
+					reinsert += current.dominates(False, newVector, newModel, current.children[l_succ], ancestorsAlive)
 					pass
 			else: #ancestors are not alive -> all children have to be reinserted
 				x = [l_succ for l_succ in range(1, current.number_of_children-1) if (current.children[l_succ] != None)]
 				for l_succ in x:
-					reinsert += current.dominates_new(False, newVector, newModel, current.children[l_succ], False)
+					reinsert += current.dominates(False, newVector, newModel, current.children[l_succ], False)
 					current.children[l_succ] = None
 				reinsert.append(current)
 			return reinsert
 				
 	def isdominated(self, newVector, root:'QuadTree'):
-		# 		if(root == None):
-		# 			print "None reached in is dominated"
-		# 			return False
 		k_successor = root.test_isdominated(newVector)
 		#at this point, we don't care if 'newVector' dominates the currentVector
 		#we only check if newVector is dominated by the tree
@@ -165,7 +161,6 @@ class QuadTree:
 		if k_successor == 0:
 			return False
 		elif k_successor == root.number_of_children - 1:
-			# print newVector, "is dominated by node:", root.vector 
 			return True
 		else:
 			#newVector is incomparable to current node
@@ -177,33 +172,6 @@ class QuadTree:
 				if root.isdominated(newVector, root.children[l_succ]):
 					return True
 			return False	
-	def insert(self, newVector, variables):
-		#depricated; use insert_new
-		#returns
-		#			n if it dominates n vectors
-		#			-1 if it is dominated by at least one vector
-		#			0 if it has been added/was incomparable
-		k_successor = self.test_isdominated(newVector)
-	
-		if k_successor == 0:
-			#new vector dominates current root
-			# print newVector, "dominates current root:", self.vector 
-			return 1
-		elif k_successor == self.number_of_children-1:
-			#new value is dominated by current root, break
-			# print newVector, "is dominated by current root:", self.vector 
-			return -1
-		else:
-			#new value is incomparable 
-			child = self.children[k_successor]
-			if child == None:
-				#space is free, add child
-				# print "Add child at ", k_successor, " with value: ", newVector
-				self.children[k_successor] = QuadTree(newVector, variables, self.dimensions)
-				return 0
-			else:
-				#space is occupied, insert new value further below
-				return child.insert(newVector, variables)
 			
 	def insert_subtree(self, subtree):
 		#subtree is incomparable to self and children of self
@@ -214,7 +182,8 @@ class QuadTree:
 			subtree.parent = self
 		else:
 			self.children[k_succ].insert_subtree(subtree)
-	def insert_new(self, newVector, variables):
+			
+	def insert(self, newVector, variables):
 		#returns
 		#			n if it dominates n vectors
 		#			-1 if it is dominated by at least one vector
@@ -226,7 +195,7 @@ class QuadTree:
 		
 		#second, determine the vectors that has to be deleted and reinserted, respectively
 		
-		self.dominates_new(True, newVector, variables, self, True)
+		self.dominates(True, newVector, variables, self, True)
 
 # *********************************************
 # *********************************************
@@ -251,7 +220,7 @@ def is_dominated(vector1, vector2):
 			
 	return dominated
 
-def check_pareto(newVector, archive):
+def check_partiel(newVector, archive):
 	#Only tests if the current partial assignement is already dominated
 	if archive == None:
 		return True
@@ -260,10 +229,10 @@ def check_pareto(newVector, archive):
 		return False
 	return True
 
-def check(vec, archive):
+def check_total(vec, archive):
 	#checks the completed solution and inserts it
 	if archive == None:
 		archive = QuadTree(vec, [], len(vec))
 	else:
-		return archive.insert_new(vec, [])
+		return archive.insert(vec, [])
 	return True    

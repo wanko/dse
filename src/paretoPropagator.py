@@ -5,7 +5,7 @@ from clingo.propagator import Propagator, PropagatorCheckMode
 from preferences import MaxPreference, SumPreference
 from util import copy_symbol
 from copy import copy
-from QuadTree import QuadTree, check, check_pareto
+from QuadTree import QuadTree, check_partiel, check_total
 
 class Solution():
     def __init__(self,atoms,values):
@@ -21,7 +21,7 @@ class Solution():
 class State():
     def __init__(self):
         self._values           = {}        # { name : value }
-        self._solutions        = QuadTree     # { solutions }
+        self._solutions        = None      # Quadtree of solutions
         self._previous_values  = {}        # { level : { name : value } }
         self._trail            = []        # [ literal ]
         self._stack            = []        # [ (level,index) ]
@@ -59,7 +59,6 @@ class ParetoPropagator(Propagator):
         self._best_known  = None
         self._solutions   = set()
         self._statistics  = {}      # { thread : {propgates : int, checks : int, clauses : int, literals : int}}
-        self._duplicates  = duplicates
 
     def _state(self, thread_id):
         while len(self._states) <= thread_id:
@@ -178,23 +177,12 @@ class ParetoPropagator(Propagator):
             preference = self._preferences[name]
             state.set_value(level,name,preference.update(control,changes,state._values[name]))
         if self._mode == "breadth":
-            for solution in state._solutions:
-                worse  = False
-                better = False
-                for name in state._values:
-                    if state._values[name] == None: 
-                        better = True
-                        break
-                    if state._values[name] > solution.values()[name]: worse  = True
-                    if state._values[name] < solution.values()[name]: better = True
-                if worse and not better:
-                    self._add_conflict(control,state._trail)
-                    return
-                if control.assignment.is_total: 
-                    is_total = True
-                if control.assignment.is_total and not worse and not better and not self._duplicates:
-                    self._add_conflict(control,state._trail)
-                    return
+            if not control.assignment.is_total and not check_partiel(state._values, state._solutions): 
+                self._add_conflict(control,state._trail)
+                return
+            elif control.assignment.is_total and not check_total(state._values, state._solutions):
+                self._add_conflict(control,state._trail)
+                return
         elif self._mode == "depth":
             if self._best_known != None:
                 worse  = False
@@ -208,18 +196,7 @@ class ParetoPropagator(Propagator):
     def check(self, control):
         self._statistics[control.thread_id]["checks"]+=1
         state = self._state(control.thread_id)
-        if self._mode == "breadth":
-            remove = set()
-            for solution in state._solutions:
-                worse  = False
-                better = False
-                for name in state._values:
-                    if state._values[name] > solution.values()[name]: worse  = True
-                    if state._values[name] < solution.values()[name]: better = True
-                if better and not worse:
-                    remove.add(solution)
-            state._solutions.difference(remove)
-        elif self._mode == "depth":
+        if self._mode == "depth":
             if self._best_known != None:
                 worse  = False
                 better = False
@@ -252,5 +229,5 @@ class ParetoPropagator(Propagator):
         state = self._state(m.thread_id)
         m.extend([Function("pref", [Function(name), Function(self._preferences[name].type()), Number(value)])
                       for name, value in state._values.items()])
-        if self._mode == "breadth": state._solutions.add(Solution([copy_symbol(atom) for atom in m.symbols(theory=True,shown=True)],copy(state._values)))
+        if self._mode == "breadth": self._solutions_map[copy(state._values)] = [copy_symbol(atom) for atom in m.symbols(theory=True,shown=True)]
         elif self._mode == "depth": self._best_known = Solution([copy_symbol(atom) for atom in m.symbols(theory=True,shown=True)],copy(state._values))
