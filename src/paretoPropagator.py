@@ -21,7 +21,7 @@ class Solution():
 class State():
     def __init__(self):
         self._values           = {}        # { name : value }
-        self._solutions        = None      # Quadtree of solutions
+        self._solutions        = None # Quadtree of solutions
         self._previous_values  = {}        # { level : { name : value } }
         self._trail            = []        # [ literal ]
         self._stack            = []        # [ (level,index) ]
@@ -50,7 +50,7 @@ class State():
         self._stack.pop()
 
 class ParetoPropagator(Propagator):
-    def __init__(self,theory,mode,duplicates):
+    def __init__(self,theory,mode):
         self._theory      = theory  # theory providing values
         self._preferences = {}      # { name : preference }
         self._l2p         = {}      # { literal : [preference] }
@@ -58,6 +58,7 @@ class ParetoPropagator(Propagator):
         self._mode        = mode
         self._best_known  = None
         self._solutions   = set()
+        self._solutions_map = {}    # { vector : atoms }
         self._statistics  = {}      # { thread : {propgates : int, checks : int, clauses : int, literals : int}}
 
     def _state(self, thread_id):
@@ -70,6 +71,11 @@ class ParetoPropagator(Propagator):
             if str(symbol) == str(atom.symbol.arguments[0]):
                 return init.solver_literal(atom.literal)
         return None
+
+    def _dict_to_vector(self,dictionary):
+        keys = list(dictionary.keys())
+        list(dictionary.keys()).sort()
+        return tuple([dictionary[key] for key in keys])
 
     def _init_statistics(self,threads):
         for id in range(0,threads):
@@ -91,26 +97,16 @@ class ParetoPropagator(Propagator):
         return self._best_known
 
     def get_solutions(self):
-        solutions = set()
-        remove    = set()
-        for state in self._states:
-            solutions = solutions.union(state._solutions)
+        solutions = self._states[0]._solutions
+        for state in self._states[1:]:
+            compare = state._solutions.to_unordered_list()
+            for solution in compare:
+                check_total(solution,solutions)
+        solutions_with_atoms = set()
+        solutions = solutions.to_unordered_list()
         for solution in solutions:
-            compare = set()
-            compare = compare.union(solutions)
-            compare.remove(solution)
-            for solution2 in compare:
-                worse  = False
-                better = False
-                for name in solution.values():
-                    if solution.values()[name] > solution2.values()[name]: worse  = True
-                    if solution.values()[name] < solution2.values()[name]: better = True
-                if worse and not better:
-                    remove.add(solution)
-                if better and not worse:
-                    remove.add(solution2)
-
-        return solutions.difference(remove)
+            solutions_with_atoms.add(Solution(self._solutions_map[solution],solution))
+        return solutions_with_atoms
 
     def init(self, init):
         self._init_statistics(init.number_of_threads)
@@ -177,12 +173,17 @@ class ParetoPropagator(Propagator):
             preference = self._preferences[name]
             state.set_value(level,name,preference.update(control,changes,state._values[name]))
         if self._mode == "breadth":
-            if not control.assignment.is_total and not check_partiel(state._values, state._solutions): 
+            if not control.assignment.is_total and not check_partiel(self._dict_to_vector(state._values), state._solutions): 
                 self._add_conflict(control,state._trail)
                 return
-            elif control.assignment.is_total and not check_total(state._values, state._solutions):
-                self._add_conflict(control,state._trail)
-                return
+            elif control.assignment.is_total:
+                updated, archive = check_total(self._dict_to_vector(state._values), state._solutions)
+                if updated:
+                    state._solutions = archive
+                    return
+                else:
+                    self._add_conflict(control,state._trail)
+                    return
         elif self._mode == "depth":
             if self._best_known != None:
                 worse  = False
@@ -194,30 +195,33 @@ class ParetoPropagator(Propagator):
                     return
 
     def check(self, control):
+        if not self._mode == "depth":
+            return
+
         self._statistics[control.thread_id]["checks"]+=1
         state = self._state(control.thread_id)
-        if self._mode == "depth":
-            if self._best_known != None:
-                worse  = False
-                better = False
-                for name in state._values:
-                    assert state._values[name] != None
-                    if state._values[name] > self._best_known.values()[name]: worse  = True
-                    if state._values[name] < self._best_known.values()[name]: better = True
-                if not (better and not worse):
-                    self._add_conflict(control,state._trail)
-                    return
 
-            for solution in self._solutions:
-                worse  = False
-                better = False
-                for name in state._values:
-                    assert state._values[name] != None
-                    if state._values[name] > solution.values()[name]: worse  = True
-                    if state._values[name] < solution.values()[name]: better = True
-                if not (better and worse):
-                    self._add_conflict(control,state._trail)
-                    return
+        if self._best_known != None:
+            worse  = False
+            better = False
+            for name in state._values:
+                assert state._values[name] != None
+                if state._values[name] > self._best_known.values()[name]: worse  = True
+                if state._values[name] < self._best_known.values()[name]: better = True
+            if not (better and not worse):
+                self._add_conflict(control,state._trail)
+                return
+
+        for solution in self._solutions:
+            worse  = False
+            better = False
+            for name in state._values:
+                assert state._values[name] != None
+                if state._values[name] > solution.values()[name]: worse  = True
+                if state._values[name] < solution.values()[name]: better = True
+            if not (better and worse):
+                self._add_conflict(control,state._trail)
+                return
 
 
     def undo(self, thread_id, assign, changes):
@@ -229,5 +233,5 @@ class ParetoPropagator(Propagator):
         state = self._state(m.thread_id)
         m.extend([Function("pref", [Function(name), Function(self._preferences[name].type()), Number(value)])
                       for name, value in state._values.items()])
-        if self._mode == "breadth": self._solutions_map[copy(state._values)] = [copy_symbol(atom) for atom in m.symbols(theory=True,shown=True)]
+        if self._mode == "breadth": self._solutions_map[copy(self._dict_to_vector(state._values))] = [copy_symbol(atom) for atom in m.symbols(theory=True,shown=True)]
         elif self._mode == "depth": self._best_known = Solution([copy_symbol(atom) for atom in m.symbols(theory=True,shown=True)],copy(state._values))

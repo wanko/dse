@@ -90,7 +90,7 @@ class DSEApp(Application):
         with ProgramBuilder(ctl) as bld:
             parse_files(files, lambda ast: thy.rewrite_ast(ast, bld.add))
 
-        pareto_propagator = ParetoPropagator(thy,self.mode,self.duplicate_vectors)
+        pareto_propagator = ParetoPropagator(thy,self.mode)
         self.propagator = pareto_propagator
         ctl.register_propagator(pareto_propagator)
 

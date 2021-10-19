@@ -3,11 +3,7 @@ Created on 09.12.2016
 
 @author: kn165
 '''
-import sys
-# from pareto_propagator_simple import QuadTree
-import platform
 from warnings import warn
-from LinkedList import LinkedList
 
 
 def implies(a, b):
@@ -229,10 +225,9 @@ def check_partiel(newVector, archive):
 		return False
 	return True
 
-def check_total(vec, archive):
+def check_total(vec, archive : 'QuadTree'):
 	#checks the completed solution and inserts it
 	if archive == None:
 		archive = QuadTree(vec, [], len(vec))
-	else:
-		return archive.insert(vec, [])
-	return True    
+		return True, archive
+	return archive.insert(vec, []), archive    
