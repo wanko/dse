@@ -187,11 +187,12 @@ class QuadTree:
 		
 		#first, check if 'newVector' is dominated by an element of the tree
 		if(self.isdominated(newVector, self)):
-			return -1
+			return False
 		
 		#second, determine the vectors that has to be deleted and reinserted, respectively
 		
 		self.dominates(True, newVector, variables, self, True)
+		return True
 
 # *********************************************
 # *********************************************

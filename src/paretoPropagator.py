@@ -173,17 +173,9 @@ class ParetoPropagator(Propagator):
             preference = self._preferences[name]
             state.set_value(level,name,preference.update(control,changes,state._values[name]))
         if self._mode == "breadth":
-            if not control.assignment.is_total and not check_partiel(self._dict_to_vector(state._values), state._solutions): 
+            if not check_partiel(self._dict_to_vector(state._values), state._solutions): 
                 self._add_conflict(control,state._trail)
                 return
-            elif control.assignment.is_total:
-                updated, archive = check_total(self._dict_to_vector(state._values), state._solutions)
-                if updated:
-                    state._solutions = archive
-                    return
-                else:
-                    self._add_conflict(control,state._trail)
-                    return
         elif self._mode == "depth":
             if self._best_known != None:
                 worse  = False
@@ -195,22 +187,27 @@ class ParetoPropagator(Propagator):
                     return
 
     def check(self, control):
-        if not self._mode == "depth":
-            return
-
         self._statistics[control.thread_id]["checks"]+=1
         state = self._state(control.thread_id)
-
-        if self._best_known != None:
-            worse  = False
-            better = False
-            for name in state._values:
-                assert state._values[name] != None
-                if state._values[name] > self._best_known.values()[name]: worse  = True
-                if state._values[name] < self._best_known.values()[name]: better = True
-            if not (better and not worse):
+        if self._mode == "breadth":
+            updated, archive = check_total(self._dict_to_vector(state._values), state._solutions)
+            if updated:
+                state._solutions = archive
+                return
+            else:
                 self._add_conflict(control,state._trail)
                 return
+        elif self._mode == "depth":      
+            if self._best_known != None:
+                worse  = False
+                better = False
+                for name in state._values:
+                    assert state._values[name] != None
+                    if state._values[name] > self._best_known.values()[name]: worse  = True
+                    if state._values[name] < self._best_known.values()[name]: better = True
+                if not (better and not worse):
+                    self._add_conflict(control,state._trail)
+                    return
 
         for solution in self._solutions:
             worse  = False
