@@ -161,6 +161,18 @@ class ParetoPropagator(Propagator):
                 control.propagate()
         return
 
+    def _compare(self,solution1,solution2):
+        worse  = False
+        better = False
+        for name in solution1:
+            if solution1[name] == None: 
+                better = True
+                break
+            if solution1[name] > solution2.values()[name]: worse  = True
+            if solution1[name] < solution2.values()[name]: better = True
+        return worse, better
+
+
     def propagate(self, control, changes):
         self._statistics[control.thread_id]["propagates"]+=1
         state = self._state(control.thread_id)
@@ -178,28 +190,13 @@ class ParetoPropagator(Propagator):
             state.set_value(level,name,preference.update(control,changes,state._values[name]))
         if self._mode == "breadth":
             for solution in state._solutions:
-                worse  = False
-                better = False
-                for name in state._values:
-                    if state._values[name] == None: 
-                        better = True
-                        break
-                    if state._values[name] > solution.values()[name]: worse  = True
-                    if state._values[name] < solution.values()[name]: better = True
+                worse,better = self._compare(state._values,solution)
                 if worse and not better:
-                    self._add_conflict(control,state._trail)
-                    return
-                if control.assignment.is_total: 
-                    is_total = True
-                if control.assignment.is_total and not worse and not better and not self._duplicates:
                     self._add_conflict(control,state._trail)
                     return
         elif self._mode == "depth":
             if self._best_known != None:
-                worse  = False
-                for name in state._values:
-                    if state._values[name] == None: break
-                    if state._values[name] > self._best_known.values()[name]: worse  = True
+                worse,true  = self._compare(state._values,self._best_known)
                 if worse:
                     self._add_conflict(control,state._trail)
                     return
@@ -210,37 +207,25 @@ class ParetoPropagator(Propagator):
         if self._mode == "breadth":
             remove = set()
             for solution in state._solutions:
-                worse  = False
-                better = False
-                for name in state._values:
-                    if state._values[name] > solution.values()[name]: worse  = True
-                    if state._values[name] < solution.values()[name]: better = True
+                worse,better = self._compare(state._values,solution)
+                if not worse and not better and not self._duplicates:
+                    self._add_conflict(control,state._trail)
+                    return
                 if better and not worse:
                     remove.add(solution)
             state._solutions.difference(remove)
         elif self._mode == "depth":
             if self._best_known != None:
-                worse  = False
-                better = False
-                for name in state._values:
-                    assert state._values[name] != None
-                    if state._values[name] > self._best_known.values()[name]: worse  = True
-                    if state._values[name] < self._best_known.values()[name]: better = True
+                worse,better = self._compare(state._values,self._best_known)
                 if not (better and not worse):
                     self._add_conflict(control,state._trail)
                     return
 
             for solution in self._solutions:
-                worse  = False
-                better = False
-                for name in state._values:
-                    assert state._values[name] != None
-                    if state._values[name] > solution.values()[name]: worse  = True
-                    if state._values[name] < solution.values()[name]: better = True
+                worse,better = self._compare(state._values,solution)
                 if not (better and worse):
                     self._add_conflict(control,state._trail)
                     return
-
 
     def undo(self, thread_id, assign, changes):
         state = self._state(thread_id)
