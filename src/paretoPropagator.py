@@ -1,4 +1,4 @@
-from typing import OrderedDict
+from collections import OrderedDict
 from clingo.symbol import Function, Number, SymbolType, Tuple_
 from clingo.theory_atoms import TheoryTermType
 from clingo.propagator import Propagator, PropagatorCheckMode
