@@ -2,35 +2,35 @@
 %% ALLOCATION  %%
 %%%%%%%%%%%%%%%%%
 
-allocated(R) :- bind(_,task(T,A),R), task(T,A).
-allocated(R) :- reached(_,R,_).
-allocated(R) :- reached(_,_,R).
-allocated(link(R1,R2)) :- reached(_,R1,R2).
+allocated(R) :- bind(_,T,R), task(T,A).
+allocated(R) :- reached(_,_,R,_).
+allocated(R) :- reached(_,_,_,R).
+allocated(L) :- reached(_,L,R1,R2).
 
 
 %%%%%%%%%%%%%%%
 %%  BINDING  %%
 %%%%%%%%%%%%%%%
 
-1 { bind(M,task(T,A),R) : map(M,task(T,A),R) } 1 :- task(T,A).
+1 { bind(M,T,R) : map(M,T,R) } 1 :- task(T,_).
 
 %%%%%%%%%%%%%%%
 %%  ROUTING  %%
 %%%%%%%%%%%%%%%
 
-node(N;N') :- link(N,N').
-nr_links(NR) :- NR=#count{ link(N,N') : link(N,N'), link(N',N), N<N'; link(N,N') : link(N,N'), not link(N',N) }.
+node(N;N') :- link(_,N,N').
+nr_links(NR) :- NR=#count{ link(L,N,N') : link(L,N,N'), link(L,N',N), N<N'; link(L,N,N') : link(L,N,N'), not link(L,N',N) }.
 
-{ reached(comm(T,T',A),N,N') : link(N,N') } 1 :- node(N), comm(T,T',A).
-{ reached(comm(T,T',A),N,N') : link(N,N') } 1 :- node(N'), comm(T,T',A).
+{ reached(C,L,N,N') : link(L,N,N') } 1 :- node(N), comm(C,A).
+{ reached(C,L,N,N') : link(L,N,N') } 1 :- node(N'), comm(C,A).
 
 visit(C,R) :- send(T,C), bind(_,T,R).
-visit(C,R') :- visit(C,R), reached(C,R,R').
-:- reached(C,_,R), not visit(C,R).
+visit(C,R') :- visit(C,R), reached(C,_,R,R').
+:- reached(C,_,_,R), not visit(C,R).
 :- read(T,C), bind(_,T,R), not visit(C,R).
 	
 hops(C,R,0)    :- send(T,C), bind(_,T,R).
-hops(C,R',H+1) :- hops(C,R,H), reached(C,R,R'), H<NR, nr_links(NR).
+hops(C,R',H+1) :- hops(C,R,H), reached(C,_,R,R'), H<NR, nr_links(NR).
 hops(C,H)      :- hops(C,R,H), read(T',C), bind(_,T',R).	
 
 %%%%%%%%%%%%%%%%%%
@@ -39,7 +39,7 @@ hops(C,H)      :- hops(C,R,H), read(T',C), bind(_,T',R).
 
 %all starting times are bigger than 0
 %T>=0 --> -T<=0 --> 0-T<=0
-&diff { 0-task(T,A) } <= 0 :- task(T,A).
+&diff { 0-T } <= 0 :- task(T,A).
 
 %all tasks have to finish before their deadline
 %T<=DL-e(T) --> T-0<=DL-e(T)
@@ -48,15 +48,15 @@ hops(C,H)      :- hops(C,R,H), read(T',C), bind(_,T',R).
 
 %tasks bound onto the same resource have to be scheduled successively   
 %T2-T1>=ET_T1 --> -T2+T1<=-ET_T1 --> T1-T2<=-ET_T1
-&diff { task(T1,A1)-task(T2,A2) } <= -Time1 :- task(T1,A1), task(T2,A2), (T1,A1)<(T2,A2),
-							                   bind(M1,task(T1,A1),R), bind(M2,task(T2,A2),R),
-							                   priority(task(T1,A1),task(T2,A2)),
+&diff { T1-T2 } <= -Time1 :- task(T1,A1), task(T2,A2), T1<T2,
+							                   bind(M1,T1,R), bind(M2,T2,R),
+							                   priority(T1,T2),
 							                   executionTime(M1,Time1).
-&diff { task(T2,A2)-task(T1,A1) } <= -Time2 :- task(T1,A1), task(T2,A2), (T1,A1)<(T2,A2),
-							                   bind(M1,task(T1,A1),R), bind(M2,task(T2,A2),R),
-							                   not priority(task(T1,A1),task(T2,A2)),
-                                               not depends_trans(task(T1,A1),task(T2,A2)), 
-											   not depends_trans(task(T2,A2),task(T1,A1)),
+&diff { T2-T1 } <= -Time2 :- task(T1,A1), task(T2,A2), T1<T2,
+							                   bind(M1,T1,R), bind(M2,T2,R),
+							                   not priority(T1,T2),
+                                               not depends_trans(T1,T2), 
+											   not depends_trans(T2,T1),
 							                   executionTime(M2,Time2).
 	
 	
@@ -78,4 +78,4 @@ hops(C,H)      :- hops(C,R,H), read(T',C), bind(_,T',R).
 
 
 #show bind/3.
-#show reached/3.
+#show reached/4.
