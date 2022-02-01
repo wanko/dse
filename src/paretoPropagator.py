@@ -183,7 +183,8 @@ class ParetoPropagator(Propagator):
 
         to_update = set()
         for lit in changes:
-            for name in self._l2p[lit]: to_update.add(name)
+            if lit in self._l2p:
+                for name in self._l2p[lit]: to_update.add(name)
         for name in to_update:
             state._values.setdefault(name,None)
             preference = self._preferences[name]
