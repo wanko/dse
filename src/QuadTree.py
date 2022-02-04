@@ -231,4 +231,4 @@ def check_total(vec, archive : 'QuadTree'):
 	if archive == None:
 		archive = QuadTree(vec, [], len(vec))
 		return True, archive
-	return archive.insert(vec, []), archive    
+	return archive.insert(vec, []), archive

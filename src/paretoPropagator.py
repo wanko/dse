@@ -19,12 +19,15 @@ class Solution():
         return self.__values
 
 class State():
-    def __init__(self):
+    def __init__(self,preferences):
         self._values           = {}        # { name : value }
         self._solutions        = None # Quadtree of solutions
         self._previous_values  = {}        # { level : { name : value } }
         self._trail            = []        # [ literal ]
         self._stack            = []        # [ (level,index) ]
+
+        for preference in preferences:
+            self._values[preference] = 0
 
     def set_value(self,level,name,value):
         p = self._previous_values.setdefault(level,{})
@@ -38,9 +41,7 @@ class State():
         p = self._previous_values
         c = self._values
         if level in p:
-            for name, value in p[level].items():
-                if value is None: del c[name]
-                else:             c[name] = value
+            for name, value in p[level].items(): c[name] = value
             del p[level]
 
     def backtrack(self,level):
@@ -63,7 +64,7 @@ class ParetoPropagator(Propagator):
 
     def _state(self, thread_id):
         while len(self._states) <= thread_id:
-            self._states.append(State())
+            self._states.append(State(self._preferences))
         return self._states[thread_id]
 
     def _symbol_to_lit(self,symbol,init):
