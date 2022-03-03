@@ -25,8 +25,11 @@ class MaxPreference():
                         assignment = self.__theory.get_value(control.thread_id,variable)
                         if max < assignment + offset:
                             max =  assignment + offset
-
-        return int(max)
+                            
+        if max == float('-inf'): 
+            return 0 
+        else:
+            return int(max)
 
 class SumPreference():
     def __init__(self,name,type):
